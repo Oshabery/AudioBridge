@@ -5,8 +5,8 @@
 ## 環境
 | 項目 | 値 |
 |---|---|
-| Mac 機種 / macOS | 未記入 |
-| Xcode / Swift | 未記入 |
+| Mac 機種 / macOS | MacBook Pro (Apple silicon, arm64) / macOS 27.2 |
+| Xcode / Swift | Apple Swift 6.4 (swiftlang-6.4.0.34.1) |
 | iPhone 機種 / iOS | 未記入 |
 | ネットワーク（Wi-Fi 規格、同一 AP か） | 未記入 |
 
@@ -20,7 +20,7 @@
 ## S2: Mac 受信
 | # | 項目 | 結果 | メモ |
 |---|---|---|---|
-| 1 | `swift build` / `swift test` | 未実施 | |
+| 1 | `swift build` / `swift test` | 成功 | 2026-11-23。`scripts/build-and-test.sh` で全ターゲットのビルド成功、テスト 24 件すべて通過。修正なし |
 | 2 | Mac 自身の音との同時再生 | 未実施 | |
 | 3 | AirPods への切替と取り外し | 未実施 | |
 | 4 | loss 2% / jitter 30 ms | 未実施 | |
