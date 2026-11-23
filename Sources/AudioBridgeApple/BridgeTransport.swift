@@ -15,8 +15,8 @@ public enum BridgeService {
     }
 }
 
-/// Advertises `_audiobridge._udp` and delivers each received datagram. One active sender at a time:
-/// a new sender replaces the previous one.
+/// Advertises `_audiobridge._udp` and delivers each received datagram.
+/// Several senders (iPhones, iPads, Macs) may stream at once; streams are told apart by the packet's sessionID.
 public final class BridgeReceiver: @unchecked Sendable {
     public let serviceName: String
     public let requestedPort: UInt16?
@@ -26,7 +26,11 @@ public final class BridgeReceiver: @unchecked Sendable {
     public let queue = DispatchQueue(label: "audiobridge.receiver", qos: .userInteractive)
 
     private var listener: NWListener?
-    private var connection: NWConnection?
+    private var connections: [ObjectIdentifier: NWConnection] = [:]   // queue only
+    private var lastActivity: [ObjectIdentifier: UInt64] = [:]        // queue only
+    public static let maxSenders = 8
+    /// UDP "connections" never close by themselves; senders silent this long are dropped.
+    public static let idleTimeoutNanos: UInt64 = 10_000_000_000
 
     public init(serviceName: String, port: UInt16? = nil) {
         self.serviceName = serviceName
@@ -64,19 +68,46 @@ public final class BridgeReceiver: @unchecked Sendable {
 
     public func stop() {
         queue.sync {
-            connection?.cancel()
-            connection = nil
+            connections.values.forEach { $0.cancel() }
+            connections.removeAll()
             listener?.cancel()
             listener = nil
         }
     }
 
+    private func pruneIdle() {
+        let now = HostClock.nowNanos()
+        for (key, c) in connections where now &- (lastActivity[key] ?? 0) > Self.idleTimeoutNanos {
+            onEvent?("sender idle, closing: \(c.endpoint)")
+            c.cancel()
+            connections[key] = nil
+            lastActivity[key] = nil
+        }
+    }
+
     private func adopt(_ newConnection: NWConnection) {
-        connection?.cancel()
-        connection = newConnection
-        onEvent?("sender connected: \(newConnection.endpoint)")
-        newConnection.stateUpdateHandler = { [weak self] state in
-            if case .failed(let error) = state { self?.onEvent?("sender connection failed: \(error)") }
+        pruneIdle()
+        guard connections.count < Self.maxSenders else {
+            onEvent?("rejecting sender \(newConnection.endpoint): already \(Self.maxSenders) senders")
+            newConnection.cancel()
+            return
+        }
+        let key = ObjectIdentifier(newConnection)
+        connections[key] = newConnection
+        lastActivity[key] = HostClock.nowNanos()
+        onEvent?("sender connected: \(newConnection.endpoint) (\(connections.count) total)")
+        newConnection.stateUpdateHandler = { [weak self, weak newConnection] state in
+            guard let self else { return }
+            switch state {
+            case .failed(let error):
+                self.onEvent?("sender connection failed: \(error)")
+                newConnection?.cancel()
+            case .cancelled:
+                self.connections[key] = nil
+                self.lastActivity[key] = nil
+            default:
+                break
+            }
         }
         newConnection.start(queue: queue)
         receive(on: newConnection)
@@ -85,9 +116,13 @@ public final class BridgeReceiver: @unchecked Sendable {
     private func receive(on connection: NWConnection) {
         connection.receiveMessage { [weak self, weak connection] data, _, _, error in
             guard let self, let connection else { return }
-            if let data, !data.isEmpty { self.onDatagram?(data) }
+            if let data, !data.isEmpty {
+                self.lastActivity[ObjectIdentifier(connection)] = HostClock.nowNanos()
+                self.onDatagram?(data)
+            }
             if let error {
                 self.onEvent?("receive error: \(error)")
+                connection.cancel()
                 return
             }
             if case .cancelled = connection.state { return }

@@ -43,15 +43,15 @@ timer.schedule(deadline: .now() + 1, repeating: 1)
 timer.setEventHandler {
     let s = pipeline.stats.snapshot()
     defer { previous = s }
-    guard let fmt = pipeline.currentFormat() else { return }
+    guard let fmt = pipeline.status() else { return }
     let pps = s.packetsReceived - previous.packetsReceived
     let fillMs = Double(s.lastFillFrames) / fmt.sampleRate * 1000
     let outMs = fmt.outputLatency * 1000
     let transitMs = Double(s.lastTransitNanos) / 1e6
     let maxTransitMs = Double(s.maxTransitNanos) / 1e6
     log(String(
-        format: "pkts/s %d | buffer %.1f ms | device %.1f ms | transit(same-host) %.2f/%.2f ms | lost %d fr | late %d | underrun %d | resync %d | drift -%d/+%d | overflow %d fr | bad %d",
-        pps, fillMs, outMs, transitMs, maxTransitMs,
+        format: "streams %d | pkts/s %d | buffer %.1f ms | device %.1f ms | transit(same-host) %.2f/%.2f ms | lost %d fr | late %d | underrun %d | resync %d | drift -%d/+%d | overflow %d fr | bad %d",
+        fmt.activeStreams, pps, fillMs, outMs, transitMs, maxTransitMs,
         s.framesConcealed - previous.framesConcealed,
         s.packetsDropped - previous.packetsDropped,
         s.underruns - previous.underruns,

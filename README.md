@@ -85,6 +85,12 @@ swift run abtone --seconds 60
 3. Xcode 27 で iOS アプリ（拡張のインストールと使い方の説明だけを担う）と Generic Extension を作る。拡張は `MediaDeviceExtension` と `RealtimeSampleHandling` に準拠させる。
 4. 拡張の中で Audio Server Plug-in（出力デバイス 1 つ、`kAudioDeviceTransportTypeRemoteStreaming`、UID = `MediaOutputDevice.id`）を `AudioServerPlugInRegisterMediaDeviceExtension` で公開し、I/O callback → `SPSCAudioRingBuffer` → 送信の流れを作る。
 
+## 複数の端末から同時に受信
+- `abrecv` は最大 8 台からの送信を同時に受けられます。送信は sessionID ごとに別のストリームとして扱います。
+- ストリームごとに再生エンジンを持ち、すべて Mac の既定出力に流します。そのため、各端末の音と Mac 自身の音は OS が混ぜて、同じ出力先（AirPods など）から鳴ります。
+- 3 秒間届かなくなったストリームは終了し、10 秒間無音の送信元は切断します。
+- 確認方法: ターミナルを 2 つ開き、`swift run abtone` をそれぞれ実行する（`--gain 0.1` などで音量を変えると聞き分けやすくなります）。ログの `streams` が 2 になれば成功です。
+
 ## 既知の制約
 - iOS 側は iOS 27 以降と、Apple の承認が必要な entitlement が前提です。iOS アプリは拡張を届けて使い方を説明するためだけのアプリにする必要があります（DPLA 3.3.7 L）。
 - 通話、DRM 保護コンテンツ、ロック中の挙動は未検証です。
