@@ -20,7 +20,7 @@
 ## S2: Mac 受信
 | # | 項目 | 結果 | メモ |
 |---|---|---|---|
-| 1 | `swift build` / `swift test` | 未実施 | |
+| 1 | `swift build` / `swift test` | 一部済み | 2026-11-23: Linux（Swift 6.0.3）で AudioBridgeCore をビルドし、テスト 24 件がすべて成功。Mac 専用部分（AudioBridgeApple / abrecv / abtone）は Mac で未ビルド。 |
 | 2 | Mac 自身の音との同時再生 | 未実施 | |
 | 3 | AirPods への切替と取り外し | 未実施 | |
 | 4 | loss 2% / jitter 30 ms | 未実施 | |

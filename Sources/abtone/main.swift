@@ -59,14 +59,16 @@ func loadFile(_ path: String) throws -> [Float] {
     guard let outBuffer = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: capacity) else {
         throw NSError(domain: "abtone", code: 3)
     }
-    var supplied = false
+    // A class box, because the SDK may mark the input block @Sendable (no captured `var` mutation allowed).
+    final class Flag: @unchecked Sendable { var value = false }
+    let supplied = Flag()
     var conversionError: NSError?
     _ = converter.convert(to: outBuffer, error: &conversionError) { _, status in
-        if supplied {
+        if supplied.value {
             status.pointee = .endOfStream
             return nil
         }
-        supplied = true
+        supplied.value = true
         status.pointee = .haveData
         return inBuffer
     }

@@ -1,5 +1,6 @@
 import AudioBridgeCore
 import Foundation
+import Synchronization
 
 /// Glues BridgeReceiver → one StreamPlayer per sender stream (keyed by sessionID).
 /// Every player plays to the Mac's default output, so all senders and the Mac's own audio
