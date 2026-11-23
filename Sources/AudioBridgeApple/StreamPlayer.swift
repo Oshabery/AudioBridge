@@ -1,6 +1,7 @@
 import AVFAudio
 import AudioBridgeCore
 import Foundation
+import Synchronization
 #if os(macOS)
 import CoreAudio
 #endif
